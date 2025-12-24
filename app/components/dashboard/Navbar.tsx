@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Search, Bell, Menu, X, ChevronDown } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Search, Bell, Menu, X, ChevronDown, LogOut } from 'lucide-react';
 import Logo from '@/app/components/ui/Logo';
 import { ModeToggle } from '@/app/components/darkmode';
 
@@ -12,9 +12,59 @@ interface NavbarProps {
   isSidebarOpen: boolean;
 }
 
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  avatar?: string;
+  role: string;
+}
+
 export default function Navbar({ onMenuToggle, isSidebarOpen }: NavbarProps) {
+  const router = useRouter();
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+
+  // Fetch current user on mount
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const response = await fetch('/api/auth/me');
+        if (response.ok) {
+          const data = await response.json();
+          setUser(data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching user:', error);
+      }
+    };
+    fetchUser();
+  }, []);
+
+  // Handle logout
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      router.push('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
+
+  // Get user initials for avatar
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full h-16 bg-[var(--bg-primary)]/95 backdrop-blur-md border-b border-[var(--border-light)]">
@@ -85,7 +135,7 @@ export default function Navbar({ onMenuToggle, isSidebarOpen }: NavbarProps) {
               className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-[var(--bg-secondary)] transition-colors"
             >
               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--color-primary-500)] to-[var(--color-accent-600)] flex items-center justify-center text-white font-semibold text-sm">
-                U
+                {user ? getInitials(user.name) : 'U'}
               </div>
               <ChevronDown className={`w-4 h-4 text-[var(--text-tertiary)] transition-transform ${isProfileOpen ? 'rotate-180' : ''}`} />
             </button>
@@ -96,8 +146,8 @@ export default function Navbar({ onMenuToggle, isSidebarOpen }: NavbarProps) {
                 <div className="fixed inset-0 z-10" onClick={() => setIsProfileOpen(false)} />
                 <div className="absolute right-0 top-full mt-2 w-56 py-2 bg-[var(--bg-primary)] rounded-xl shadow-xl border border-[var(--border-light)] z-20">
                   <div className="px-4 py-2 border-b border-[var(--border-light)]">
-                    <p className="font-medium text-[var(--text-primary)]">User Name</p>
-                    <p className="text-sm text-[var(--text-tertiary)]">user@example.com</p>
+                    <p className="font-medium text-[var(--text-primary)]">{user?.name || 'User'}</p>
+                    <p className="text-sm text-[var(--text-tertiary)]">{user?.email || 'user@example.com'}</p>
                   </div>
                   <div className="py-1">
                     <Link href="/dashboard/profile" className="block px-4 py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors">
@@ -108,8 +158,13 @@ export default function Navbar({ onMenuToggle, isSidebarOpen }: NavbarProps) {
                     </Link>
                   </div>
                   <div className="border-t border-[var(--border-light)] pt-1">
-                    <button className="w-full text-left px-4 py-2 text-sm text-[var(--color-error-500)] hover:bg-[var(--bg-secondary)] transition-colors">
-                      Sign out
+                    <button
+                      onClick={handleLogout}
+                      disabled={isLoggingOut}
+                      className="w-full text-left px-4 py-2 text-sm text-[var(--color-error-500)] hover:bg-[var(--bg-secondary)] transition-colors flex items-center gap-2 disabled:opacity-50"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      {isLoggingOut ? 'Signing out...' : 'Sign out'}
                     </button>
                   </div>
                 </div>

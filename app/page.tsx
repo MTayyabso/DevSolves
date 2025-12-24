@@ -1,6 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import Logo from '@/app/components/ui/Logo';
+import { ModeToggle } from '@/app/components/darkmode';
 
 export default function LandingPage() {
   const features = [
@@ -84,6 +85,7 @@ export default function LandingPage() {
               <Link href="/login" className="text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
                 Sign In
               </Link>
+              <ModeToggle />
               <Link
                 href="/register"
                 className="h-9 px-4 bg-[var(--color-primary-500)] hover:bg-[var(--color-primary-600)] text-white text-sm font-medium rounded-lg transition-colors flex items-center"
@@ -91,7 +93,8 @@ export default function LandingPage() {
                 Get Started
               </Link>
             </div>
-            <div className="md:hidden flex items-center gap-4">
+            <div className="md:hidden flex items-center gap-3">
+              <ModeToggle />
               <Link href="/login" className="text-sm font-medium text-[var(--color-primary-600)]">
                 Sign In
               </Link>
@@ -110,7 +113,7 @@ export default function LandingPage() {
       <section className="relative overflow-hidden">
         {/* Background Gradient */}
         <div className="absolute inset-0 bg-gradient-to-br from-[var(--color-primary-50)] via-transparent to-[var(--color-accent-50)] opacity-50" />
-        
+
         {/* Animated Shapes */}
         <div className="absolute top-20 left-10 w-72 h-72 bg-[var(--color-primary-500)] rounded-full opacity-10 blur-3xl animate-float" />
         <div className="absolute bottom-20 right-10 w-96 h-96 bg-[var(--color-accent-500)] rounded-full opacity-10 blur-3xl animate-float delay-200" />
@@ -133,7 +136,7 @@ export default function LandingPage() {
 
             {/* Subheading */}
             <p className="max-w-2xl mx-auto text-lg sm:text-xl text-[var(--text-secondary)] mb-10">
-              Join the international coding Q&A platform with AI-powered assistance. 
+              Join the international coding Q&A platform with AI-powered assistance.
               Ask questions, share knowledge, and build your reputation.
             </p>
 

@@ -1,18 +1,29 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { loginSchema, getZodErrors, type LoginFormData } from '@/lib/validations/auth';
 
-export default function LoginPage() {
+function LoginForm() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
   const [formData, setFormData] = useState<LoginFormData>({
     email: '',
     password: '',
     rememberMe: false,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Check if user just registered
+  useEffect(() => {
+    if (searchParams.get('registered') === 'true') {
+      setSuccessMessage('Account created successfully! Please sign in.');
+    }
+  }, [searchParams]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -27,6 +38,8 @@ export default function LoginPage() {
         return newErrors;
       });
     }
+    // Clear success message on input
+    if (successMessage) setSuccessMessage('');
   };
 
   const validateForm = (): boolean => {
@@ -40,12 +53,46 @@ export default function LoginPage() {
     if (!validateForm()) return;
 
     setIsLoading(true);
+    setErrors({});
+    setSuccessMessage('');
+
     try {
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      console.log('Login submitted:', formData);
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        // Handle API errors
+        if (data.errors) {
+          setErrors({
+            ...(data.errors.email && { email: data.errors.email }),
+            ...(data.errors.password && { password: data.errors.password }),
+          });
+        } else {
+          setErrors({ general: data.message || 'Login failed. Please try again.' });
+        }
+        return;
+      }
+
+      // Success! Store user data and redirect
+      // TODO: Integrate with proper auth state (NextAuth, context, etc.)
+      localStorage.setItem('user', JSON.stringify(data.data));
+
+      // Redirect to dashboard
+      router.push('/dashboard');
+
     } catch (error) {
       console.error('Login error:', error);
-      setErrors({ email: 'An error occurred. Please try again.' });
+      setErrors({ general: 'An unexpected error occurred. Please try again.' });
     } finally {
       setIsLoading(false);
     }
@@ -62,6 +109,20 @@ export default function LoginPage() {
         <h1 className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)] mb-2">Welcome back</h1>
         <p className="text-sm sm:text-base text-[var(--text-secondary)]">Sign in to continue your coding journey</p>
       </div>
+
+      {/* Success message (from registration) */}
+      {successMessage && (
+        <div className="mb-6 p-4 bg-[var(--color-success-50)] border border-[var(--color-success-500)] rounded-lg">
+          <p className="text-sm text-[var(--color-success-600)] text-center">{successMessage}</p>
+        </div>
+      )}
+
+      {/* General error message */}
+      {errors.general && (
+        <div className="mb-6 p-4 bg-[var(--color-error-50)] border border-[var(--color-error-500)] rounded-lg">
+          <p className="text-sm text-[var(--color-error-500)] text-center">{errors.general}</p>
+        </div>
+      )}
 
       <div className="bg-[var(--bg-primary)]/80 backdrop-blur-xl rounded-2xl border border-[var(--border-light)] p-6 sm:p-8 shadow-xl">
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -111,9 +172,19 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full h-12 bg-[var(--color-primary-500)] hover:bg-[var(--color-primary-600)] disabled:opacity-50 text-white font-semibold rounded-lg transition-all flex items-center justify-center gap-2"
+            className="w-full h-12 bg-[var(--color-primary-500)] hover:bg-[var(--color-primary-600)] disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-all flex items-center justify-center gap-2"
           >
-            {isLoading ? 'Signing in...' : 'Sign in'}
+            {isLoading ? (
+              <>
+                <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Signing in...
+              </>
+            ) : (
+              'Sign in'
+            )}
           </button>
         </form>
 
@@ -123,5 +194,17 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="w-full flex items-center justify-center py-20">
+        <div className="animate-spin h-8 w-8 border-2 border-[var(--color-primary-500)] border-t-transparent rounded-full" />
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }
