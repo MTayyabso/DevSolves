@@ -101,13 +101,8 @@ export default function RegisterPage() {
         return;
       }
 
-      // Success!
-      setSuccessMessage('Account created successfully! Redirecting to login...');
-
-      // Redirect to login after short delay
-      setTimeout(() => {
-        router.push('/login?registered=true');
-      }, 2000);
+      // Success! Show verification modal (no auto-redirect - user must verify first)
+      setSuccessMessage('Account created successfully! Please verify your email.');
 
     } catch (error) {
       console.error('Registration error:', error);
@@ -133,23 +128,75 @@ export default function RegisterPage() {
 
   const passwordStrength = getPasswordStrength();
 
-  // Success state
+  // Success state - Email Verification Modal (Cannot be closed - must verify first!)
   if (successMessage) {
     return (
-      <div className="w-full">
-        <div className="bg-[var(--bg-primary)]/80 backdrop-blur-xl rounded-2xl border border-[var(--border-light)] p-6 sm:p-8 shadow-xl text-center">
-          <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-[var(--color-success-500)] to-[var(--color-success-600)] flex items-center justify-center">
-            <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-bold text-[var(--text-primary)] mb-3">Welcome to DevSolve!</h1>
-          <p className="text-[var(--text-secondary)] mb-6">{successMessage}</p>
-          <div className="flex justify-center">
-            <div className="animate-spin h-6 w-6 border-2 border-[var(--color-primary-500)] border-t-transparent rounded-full" />
+      <>
+        {/* Overlay - No click to close */}
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          {/* Modal - Cannot be dismissed */}
+          <div className="w-full max-w-md bg-[var(--bg-primary)] rounded-2xl border border-[var(--border-light)] p-6 sm:p-8 shadow-2xl text-center animate-in fade-in zoom-in duration-300">
+            {/* Warning Icon */}
+            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-[var(--color-warning-500)] to-[var(--color-warning-600)] flex items-center justify-center">
+              <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+            </div>
+
+            <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-2">Email Verification Required</h2>
+
+            <div className="bg-[var(--color-warning-50)] border border-[var(--color-warning-300)] rounded-xl p-4 mb-4">
+              <p className="text-sm text-[var(--color-warning-700)] font-medium">
+                ⚠️ You cannot access the dashboard until you verify your email!
+              </p>
+            </div>
+
+            <p className="text-[var(--text-secondary)] mb-4">
+              We&apos;ve sent a verification link to:
+            </p>
+
+            <p className="font-semibold text-[var(--color-primary-600)] bg-[var(--bg-secondary)] px-4 py-2 rounded-lg inline-block mb-6">
+              {formData.email}
+            </p>
+
+            <div className="bg-[var(--bg-secondary)] rounded-xl p-4 mb-6 text-left">
+              <p className="text-sm text-[var(--text-primary)] font-medium mb-2">📩 What to do now:</p>
+              <ol className="text-sm text-[var(--text-secondary)] space-y-2 list-decimal list-inside">
+                <li>Open your email inbox</li>
+                <li>Find the email from DevSolve (check spam too!)</li>
+                <li>Click the verification link</li>
+                <li>Return here and login</li>
+              </ol>
+            </div>
+
+            <div className="space-y-3">
+              <button
+                onClick={() => window.open('https://mail.google.com', '_blank')}
+                className="w-full h-12 bg-[var(--color-primary-500)] hover:bg-[var(--color-primary-600)] text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2"
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M20.283 10.356h-8.327v3.451h4.792c-.446 2.193-2.313 3.453-4.792 3.453a5.27 5.27 0 0 1-5.279-5.28 5.27 5.27 0 0 1 5.279-5.279c1.259 0 2.397.447 3.29 1.178l2.6-2.599c-1.584-1.381-3.615-2.233-5.89-2.233a8.908 8.908 0 0 0-8.934 8.934 8.907 8.907 0 0 0 8.934 8.934c4.467 0 8.529-3.249 8.529-8.934 0-.528-.081-1.097-.202-1.625z" />
+                </svg>
+                Open Gmail
+              </button>
+
+              <Link
+                href="/login"
+                className="block w-full h-12 bg-[var(--bg-tertiary)] hover:bg-[var(--bg-secondary)] text-[var(--text-primary)] font-semibold rounded-xl transition-all border border-[var(--border-light)] flex items-center justify-center gap-2"
+              >
+                I&apos;ve verified, go to Login
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </Link>
+
+              <p className="text-xs text-[var(--text-tertiary)] mt-4">
+                Didn&apos;t receive it? Check spam folder or wait a few minutes.
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      </>
     );
   }
 

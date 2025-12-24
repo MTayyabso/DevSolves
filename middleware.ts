@@ -32,13 +32,14 @@ const publicRoutes = [
 
 /**
  * Verify JWT token using Web Crypto API (Edge compatible)
+ * Returns payload if valid, null if invalid
  */
-async function verifyTokenEdge(token: string): Promise<boolean> {
+async function verifyTokenEdge(token: string): Promise<{ valid: boolean; isVerified?: boolean }> {
     try {
         const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret';
 
         const parts = token.split('.');
-        if (parts.length !== 3) return false;
+        if (parts.length !== 3) return { valid: false };
 
         const [encodedHeader, encodedPayload, signature] = parts;
 
@@ -61,16 +62,16 @@ async function verifyTokenEdge(token: string): Promise<boolean> {
             .replace(/\//g, '_')
             .replace(/=/g, '');
 
-        if (signature !== expectedSignature) return false;
+        if (signature !== expectedSignature) return { valid: false };
 
         // Decode and check expiry
         const payload = JSON.parse(atob(encodedPayload.replace(/-/g, '+').replace(/_/g, '/')));
 
-        if (payload.exp < Math.floor(Date.now() / 1000)) return false;
+        if (payload.exp < Math.floor(Date.now() / 1000)) return { valid: false };
 
-        return true;
+        return { valid: true, isVerified: payload.isVerified };
     } catch {
-        return false;
+        return { valid: false };
     }
 }
 
@@ -91,8 +92,10 @@ export async function middleware(request: NextRequest) {
 
     // Verify token if present
     let isAuthenticated = false;
+    let tokenResult = { valid: false, isVerified: false };
     if (accessToken) {
-        isAuthenticated = await verifyTokenEdge(accessToken);
+        tokenResult = await verifyTokenEdge(accessToken);
+        isAuthenticated = tokenResult.valid;
     }
 
     // Check if accessing protected route
@@ -105,15 +108,16 @@ export async function middleware(request: NextRequest) {
         pathname === route || pathname.startsWith(route)
     );
 
-    // If accessing protected route without auth, redirect to login
-    if (isProtectedRoute && !isAuthenticated) {
+    // If accessing protected route without auth OR without verification, redirect to login
+    if (isProtectedRoute && (!isAuthenticated || !tokenResult.isVerified)) {
         const loginUrl = new URL('/login', request.url);
         loginUrl.searchParams.set('redirect', pathname);
         return NextResponse.redirect(loginUrl);
     }
 
-    // If accessing auth routes while logged in, redirect to dashboard
-    if (isAuthRoute && isAuthenticated) {
+    // If accessing auth routes while logged in AND verified, redirect to dashboard
+    // (Unverified users can still access login to get new verified token)
+    if (isAuthRoute && isAuthenticated && tokenResult.isVerified) {
         return NextResponse.redirect(new URL('/dashboard', request.url));
     }
 

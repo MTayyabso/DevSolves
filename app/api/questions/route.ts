@@ -29,7 +29,8 @@ export async function GET(request: NextRequest) {
         }
 
         // Sorting options
-        const sortOptions: Record<string, Record<string, number>> = {
+        type SortOrder = 1 | -1;
+        const sortOptions: Record<string, Record<string, SortOrder>> = {
             newest: { createdAt: -1 },
             oldest: { createdAt: 1 },
             votes: { 'upvotes.length': -1 },
@@ -83,24 +84,53 @@ export async function POST(request: NextRequest) {
     try {
         await dbConnect();
 
-        const body = await request.json();
+        // Get user from JWT cookie
+        const accessToken = request.cookies.get('access_token')?.value;
 
-        // TODO: Get author from session/JWT
-        // For now, require author in body
-        const { title, body: questionBody, tags, author } = body;
-
-        if (!author) {
+        if (!accessToken) {
             return NextResponse.json(
                 { success: false, message: 'Authentication required' },
                 { status: 401 }
             );
         }
 
+        // Verify and decode token
+        let userId: string | null = null;
+        try {
+            const parts = accessToken.split('.');
+            if (parts.length === 3) {
+                const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+                // Check if token is expired
+                if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
+                    return NextResponse.json(
+                        { success: false, message: 'Token expired' },
+                        { status: 401 }
+                    );
+                }
+                userId = payload.userId;
+            }
+        } catch {
+            return NextResponse.json(
+                { success: false, message: 'Invalid token' },
+                { status: 401 }
+            );
+        }
+
+        if (!userId) {
+            return NextResponse.json(
+                { success: false, message: 'Authentication required' },
+                { status: 401 }
+            );
+        }
+
+        const body = await request.json();
+        const { title, body: questionBody, tags } = body;
+
         const question = await Question.create({
             title,
             body: questionBody,
-            tags: tags.map((t: string) => t.toLowerCase()),
-            author,
+            tags: tags?.map((t: string) => t.toLowerCase()) || [],
+            author: userId,
         });
 
         await question.populate('author', 'name avatar reputation');

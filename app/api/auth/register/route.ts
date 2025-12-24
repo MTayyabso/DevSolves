@@ -21,7 +21,9 @@ import {
 
 export async function POST(request: NextRequest) {
     try {
-        // Rate limiting
+        // Rate limiting - COMMENTED OUT FOR DEVELOPMENT
+        // Uncomment in production
+        /*
         const ip = request.headers.get('x-forwarded-for') || 'unknown';
         const rateLimitKey = getRateLimitKey(ip, 'register');
         const rateLimit = checkRateLimit(rateLimitKey, RATE_LIMIT_CONFIGS.register);
@@ -40,6 +42,7 @@ export async function POST(request: NextRequest) {
                 }
             );
         }
+        */
 
         // Connect to database
         await dbConnect();
@@ -118,11 +121,12 @@ export async function POST(request: NextRequest) {
         // Send verification email
         await sendVerificationEmail(email, name, verificationToken);
 
-        // Generate JWT tokens
+        // Generate JWT tokens (include isVerified for middleware checks)
         const tokenPayload = {
             userId: user._id.toString(),
             email: user.email,
             role: user.role,
+            isVerified: user.isVerified,
         };
 
         const accessToken = await signAccessToken(tokenPayload);

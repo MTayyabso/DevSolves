@@ -109,11 +109,12 @@ export async function POST(request: NextRequest) {
         user.lastLoginAt = new Date();
         await user.save();
 
-        // Generate JWT tokens
+        // Generate JWT tokens (include isVerified for middleware checks)
         const tokenPayload = {
             userId: user._id.toString(),
             email: user.email,
             role: user.role,
+            isVerified: user.isVerified,
         };
 
         const accessToken = await signAccessToken(tokenPayload);

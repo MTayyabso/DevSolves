@@ -124,7 +124,7 @@ const UserSchema = new Schema<IUserDocument, IUserModel>(
         timestamps: true, // Adds createdAt and updatedAt
         toJSON: {
             // Transform output when converting to JSON
-            transform: (_, ret) => {
+            transform: (_, ret: Record<string, unknown>) => {
                 ret.id = ret._id;
                 delete ret._id;
                 delete ret.__v;
